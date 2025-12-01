@@ -1,0 +1,443 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ================================
+// USER & AUTH
+// ================================
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(STUDENT)
+  createdAt DateTime @default(now())
+
+  // Relasi ke Santri (sebagai guardian/wali)
+  santriAsGuardian Santri[] @relation("GuardianToSantri")
+
+  // Tambahkan relasi balik ke Payroll
+  payrolls Payroll[]
+
+  // Merchant (untuk e-kantin)
+  merchant          Merchant?
+  CounselingSession CounselingSession[]
+  TahfidzRecord     TahfidzRecord[]
+  PembinaanRecord   PembinaanRecord[]
+  AcademicSubject   AcademicSubject[]
+  Attendance        Attendance[]
+  PermissionRequest PermissionRequest[]
+  auditTrails       AuditTrail[]
+}
+
+// ================================
+// SANTRI
+// ================================
+model Santri {
+  id         Int       @id @default(autoincrement())
+  name       String
+  gender     String
+  birthDate  DateTime?
+  address    String?
+  guardianId Int?
+  guardian   User?     @relation("GuardianToSantri", fields: [guardianId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  invoices Invoice[]
+  savings  Savings?  @relation("SantriToSavings")
+
+  // Relasi ke modul lain
+  counselingSessions  CounselingSession[]
+  tahfidzRecords      TahfidzRecord[]
+  pembinaanRecords    PembinaanRecord[]
+  grades              AcademicGrade[]
+  attendances         Attendance[]
+  permissions         PermissionRequest[]
+  canteenTransactions CanteenTransaction[]
+}
+
+// ================================
+// TAGIHAN & PEMBAYARAN
+// ================================
+model Invoice {
+  id          Int           @id @default(autoincrement())
+  santriId    Int
+  santri      Santri        @relation(fields: [santriId], references: [id])
+  amount      Float
+  description String?
+  dueDate     DateTime?
+  status      InvoiceStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  payments Payment[]
+}
+
+model Payment {
+  id        Int            @id @default(autoincrement())
+  invoiceId Int
+  invoice   Invoice        @relation(fields: [invoiceId], references: [id])
+  amount    Decimal
+  method    PaymentMethod? @default(BANK_TRANSFER)
+  status    PaymentStatus  @default(PENDING)
+  paidAt    DateTime?
+  createdAt DateTime       @default(now())
+}
+
+// ================================
+// PEMBUKUAN KEUANGAN
+// ================================
+model Finance {
+  id          Int               @id @default(autoincrement())
+  type        TransactionType
+  category    String
+  amount      Decimal
+  description String?
+  proofUrl    String?
+  status      TransactionStatus @default(PENDING)
+  createdBy   Int?
+  approvedBy  Int?
+  approvedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+// ================================
+// TABUNGAN SANTRI
+// ================================
+model Savings {
+  id        Int      @id @default(autoincrement())
+  santriId  Int      @unique
+  santri    Santri   @relation(fields: [santriId], references: [id], name: "SantriToSavings")
+  balance   Decimal  @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  transactions SavingsTransaction[]
+}
+
+model SavingsTransaction {
+  id                 Int                  @id @default(autoincrement())
+  savingsId          Int
+  savings            Savings              @relation(fields: [savingsId], references: [id])
+  type               TransactionType
+  amount             Decimal
+  description        String?
+  proofUrl           String?
+  status             TransactionStatus    @default(PENDING)
+  createdBy          Int?
+  approvedBy         Int?
+  approvedAt         DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  CanteenTransaction CanteenTransaction[]
+}
+
+// ================================
+// PPDB (PENERIMAAN SANTRI BARU)
+// ================================
+model PpdbApplicant {
+  id             Int            @id @default(autoincrement())
+  name           String
+  gender         String
+  birthDate      DateTime?
+  address        String?
+  guardianName   String?
+  guardianPhone  String?
+  email          String?        @unique
+  registrationNo String?        @unique
+  status         PpdbStatus     @default(PENDING)
+  paymentStatus  PaymentStatus  @default(PENDING)
+  paymentId      Int?
+  documents      PpdbDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PpdbDocument {
+  id          Int           @id @default(autoincrement())
+  applicantId Int
+  applicant   PpdbApplicant @relation(fields: [applicantId], references: [id])
+  fileName    String
+  filePath    String
+  createdAt   DateTime      @default(now())
+}
+
+// ================================
+// PENGGAJIAN
+// ================================
+model Payroll {
+  id        Int      @id @default(autoincrement())
+  staffId   Int
+  staff     User     @relation(fields: [staffId], references: [id])
+  salary    Decimal
+  month     Int
+  year      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  transactions PayrollTransaction[]
+}
+
+model PayrollTransaction {
+  id          Int               @id @default(autoincrement())
+  payrollId   Int
+  payroll     Payroll           @relation(fields: [payrollId], references: [id])
+  type        TransactionType
+  amount      Decimal
+  description String?
+  proofUrl    String?
+  status      TransactionStatus @default(PENDING)
+  createdBy   Int?
+  approvedBy  Int?
+  approvedAt  DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @default(now())
+}
+
+// ================================
+// KONSELING & PENGASUHAN
+// ================================
+model CounselingSession {
+  id             Int              @id @default(autoincrement())
+  santriId       Int
+  santri         Santri           @relation(fields: [santriId], references: [id])
+  counselorId    Int?
+  counselor      User?            @relation(fields: [counselorId], references: [id])
+  topic          String
+  notes          String?
+  recommendation String?
+  status         CounselingStatus @default(PLANNED)
+  scheduledAt    DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+enum CounselingStatus {
+  PLANNED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
+// ================================
+// TAHFIDZ & PEMBINAAN
+// ================================
+model TahfidzRecord {
+  id        Int      @id @default(autoincrement())
+  santriId  Int
+  santri    Santri   @relation(fields: [santriId], references: [id])
+  juz       Int
+  pageStart Int
+  pageEnd   Int
+  score     Int?
+  remarks   String?
+  teacherId Int?
+  teacher   User?    @relation(fields: [teacherId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PembinaanRecord {
+  id        Int      @id @default(autoincrement())
+  santriId  Int
+  santri    Santri   @relation(fields: [santriId], references: [id])
+  type      String // misal: Akhlak, Kedisiplinan, Kerapian
+  score     Int?
+  remarks   String?
+  mentorId  Int?
+  mentor    User?    @relation(fields: [mentorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ================================
+// AKADEMIK & ABSENSI
+// ================================
+model AcademicSubject {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  teacherId   Int?
+  teacher     User?    @relation(fields: [teacherId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  grades    AcademicGrade[]
+  schedules ClassSchedule[]
+}
+
+model AcademicGrade {
+  id        Int             @id @default(autoincrement())
+  santriId  Int
+  subjectId Int
+  santri    Santri          @relation(fields: [santriId], references: [id])
+  subject   AcademicSubject @relation(fields: [subjectId], references: [id])
+  score     Float
+  remarks   String?
+  semester  Int
+  year      Int
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model ClassSchedule {
+  id        Int             @id @default(autoincrement())
+  subjectId Int
+  subject   AcademicSubject @relation(fields: [subjectId], references: [id])
+  dayOfWeek String
+  startTime String
+  endTime   String
+  room      String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+}
+
+model Attendance {
+  id         Int              @id @default(autoincrement())
+  santriId   Int
+  santri     Santri           @relation(fields: [santriId], references: [id])
+  date       DateTime
+  status     AttendanceStatus
+  remarks    String?
+  recordedBy Int?
+  teacher    User?            @relation(fields: [recordedBy], references: [id])
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+}
+
+enum AttendanceStatus {
+  PRESENT
+  SICK
+  PERMIT
+  ABSENT
+}
+
+// ================================
+// PERIZINAN SANTRI
+// ================================
+model PermissionRequest {
+  id         Int              @id @default(autoincrement())
+  santriId   Int
+  santri     Santri           @relation(fields: [santriId], references: [id])
+  type       PermissionType
+  reason     String
+  startDate  DateTime
+  endDate    DateTime
+  status     PermissionStatus @default(PENDING)
+  approvedBy Int?
+  approver   User?            @relation(fields: [approvedBy], references: [id])
+  approvedAt DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+}
+
+enum PermissionType {
+  KELUAR_PONDOK
+  PULANG
+}
+
+enum PermissionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ================================
+// E-KANTIN (CASHLESS SYSTEM)
+// ================================
+model Merchant {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  name      String
+  balance   Decimal  @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions CanteenTransaction[]
+}
+
+model CanteenTransaction {
+  id            Int               @id @default(autoincrement())
+  santriId      Int
+  santri        Santri            @relation(fields: [santriId], references: [id])
+  merchantId    Int
+  merchant      Merchant          @relation(fields: [merchantId], references: [id])
+  amount        Decimal
+  description   String?
+  paymentMethod PaymentMethod     @default(QRIS)
+  status        TransactionStatus @default(APPROVED)
+  createdAt     DateTime          @default(now())
+
+  savingsTransactionId Int?
+  savingsTransaction   SavingsTransaction? @relation(fields: [savingsTransactionId], references: [id])
+}
+
+model AuditTrail {
+  id        Int      @id @default(autoincrement())
+  module    String
+  recordId  Int?
+  action    String
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// ================================
+// ENUMS
+// ================================
+enum Role {
+  SUPERADMIN
+  ADMIN
+  STAFF
+  TEACHER
+  STUDENT
+  GUARDIAN
+  MERCHANT
+}
+
+enum InvoiceStatus {
+  PENDING
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  VA
+  QRIS
+  EWALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum TransactionStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PpdbStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
