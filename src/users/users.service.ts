@@ -21,13 +21,12 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async list(params: { skip?: number; take?: number } = {}) {
-    const { skip = 0, take = 20 } = params;
-    const [items, total] = await Promise.all([
-      this.prisma.user.findMany({ skip, take }),
-      this.prisma.user.count(),
-    ]);
-    return { items, total };
+  async list({ skip, take, role }: { skip: number; take: number; role?: any }) {
+    return this.prisma.user.findMany({
+      where: role ? { role } : undefined,
+      skip,
+      take,
+    });
   }
 
   async update(

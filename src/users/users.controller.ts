@@ -22,37 +22,37 @@ import { Role } from "@prisma/client";
 export class UsersController {
   constructor(private usersService: UsersService) {}
 
-  // Only SUPERADMIN and ADMIN can create users
   @Post()
   @Roles(Role.SUPERADMIN, Role.ADMIN)
   async create(@Body() dto: CreateUserDto) {
     return this.usersService.create(dto);
   }
 
-  // List all users (admin)
   @Get()
   @Roles(Role.SUPERADMIN, Role.ADMIN)
-  async list(@Query("skip") skip = "0", @Query("take") take = "20") {
+  async list(
+    @Query("skip") skip = "0",
+    @Query("take") take = "20",
+    @Query("role") role?: Role
+  ) {
     return this.usersService.list({
       skip: Number(skip),
       take: Number(take),
+      role,
     });
   }
 
-  // Get current user
   @Get("me")
   async me(@Request() req: any) {
     return this.usersService.findById(Number(req.user.userId));
   }
 
-  // Get user by id (admin only)
   @Get(":id")
   @Roles(Role.SUPERADMIN, Role.ADMIN)
   getOne(@Param("id") id: string) {
     return this.usersService.findById(Number(id));
   }
 
-  // Update user (self or admin)
   @Put(":id")
   async update(
     @Param("id") id: string,
@@ -73,7 +73,6 @@ export class UsersController {
     return this.usersService.update(targetId, body);
   }
 
-  // Delete user (admin)
   @Delete(":id")
   @Roles(Role.SUPERADMIN, Role.ADMIN)
   remove(@Param("id") id: string) {

@@ -5,7 +5,7 @@ export class CreateSantriDto {
   name: string;
 
   @IsString()
-  gender: string; // wajib
+  gender: string;
 
   @IsOptional()
   @IsDateString()

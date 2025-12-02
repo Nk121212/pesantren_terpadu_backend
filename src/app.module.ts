@@ -24,6 +24,7 @@ import { TahfidzModule } from "./tahfidz/tahfidz.module";
 import { PembinaanModule } from "./pembinaan/pembinaan.module";
 import { AuditTrailModule } from "./audit/audit-trail.module";
 import { FinanceModule } from "./finance/finance.module";
+import { AcademicModule } from "./academic/academic.module";
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { FinanceModule } from "./finance/finance.module";
     PembinaanModule,
     AuditTrailModule,
     FinanceModule,
+    AcademicModule,
   ],
   providers: [PrismaService, FcmService],
 })
