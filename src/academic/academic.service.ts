@@ -98,6 +98,74 @@ export class AcademicService {
     return this.prisma.academicGrade.create({ data: dto });
   }
 
+  async listGrades(
+    skip = 0,
+    take = 20,
+    filters?: {
+      santriId?: number;
+      subjectId?: number;
+      semester?: number;
+      year?: number;
+    }
+  ) {
+    const where: any = {};
+
+    if (filters?.santriId) {
+      where.santriId = filters.santriId;
+    }
+
+    if (filters?.subjectId) {
+      where.subjectId = filters.subjectId;
+    }
+
+    if (filters?.semester) {
+      where.semester = filters.semester;
+    }
+
+    if (filters?.year) {
+      where.year = filters.year;
+    }
+
+    const [grades, total] = await Promise.all([
+      this.prisma.academicGrade.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          santri: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          subject: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: [
+          { year: "desc" },
+          { semester: "desc" },
+          { createdAt: "desc" },
+        ],
+      }),
+      this.prisma.academicGrade.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: grades,
+      meta: {
+        total,
+        skip,
+        take,
+        hasMore: skip + take < total,
+      },
+    };
+  }
+
   async getGrades(santriId: number) {
     return this.prisma.academicGrade.findMany({
       where: { santriId },
@@ -164,9 +232,124 @@ export class AcademicService {
     }
   }
 
-  // Attendance Methods
+  async listAttendance(
+    skip = 0,
+    take = 20,
+    filters?: {
+      search?: string;
+      date?: string;
+      status?: string;
+      santriId?: number;
+    }
+  ) {
+    const where: any = {};
+
+    // Filter by date
+    if (filters?.date) {
+      // Convert date string to Date object
+      const date = new Date(filters.date);
+      const startDate = new Date(date.setHours(0, 0, 0, 0));
+      const endDate = new Date(date.setHours(23, 59, 59, 999));
+
+      where.date = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
+    // Filter by status
+    if (filters?.status) {
+      where.status = filters.status;
+    }
+
+    // Filter by santriId
+    if (filters?.santriId) {
+      where.santriId = filters.santriId;
+    }
+
+    // Search filter (by santri name)
+    if (filters?.search) {
+      where.santri = {
+        name: {
+          contains: filters.search,
+          mode: "insensitive" as any,
+        },
+      };
+    }
+
+    const [attendances, total] = await Promise.all([
+      this.prisma.attendance.findMany({
+        where,
+        skip,
+        take,
+        include: {
+          santri: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          teacher: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: {
+          date: "desc",
+        },
+      }),
+      this.prisma.attendance.count({ where }),
+    ]);
+
+    return {
+      success: true,
+      data: attendances,
+      meta: {
+        total,
+        skip,
+        take,
+        hasMore: skip + take < total,
+      },
+    };
+  }
+
   async createAttendance(dto: CreateAttendanceDto) {
-    return this.prisma.attendance.create({ data: dto });
+    // Convert date string to DateTime
+    const date = new Date(dto.date);
+
+    // Validate santri exists
+    const santri = await this.prisma.santri.findUnique({
+      where: { id: dto.santriId },
+    });
+
+    if (!santri) {
+      throw new NotFoundException(`Santri with ID ${dto.santriId} not found`);
+    }
+
+    // Validate teacher exists if recordedBy is provided
+    if (dto.recordedBy) {
+      const teacher = await this.prisma.user.findUnique({
+        where: { id: dto.recordedBy },
+      });
+
+      if (!teacher) {
+        throw new NotFoundException(
+          `Teacher with ID ${dto.recordedBy} not found`
+        );
+      }
+    }
+
+    return this.prisma.attendance.create({
+      data: {
+        santriId: dto.santriId,
+        date: date,
+        status: dto.status,
+        remarks: dto.remarks,
+        recordedBy: dto.recordedBy,
+      },
+    });
   }
 
   async getAttendance(santriId: number) {

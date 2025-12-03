@@ -13,12 +13,13 @@ export enum AttendanceStatus {
   ABSENT = "ABSENT",
 }
 
+// Update CreateAttendanceDto
 export class CreateAttendanceDto {
   @IsInt()
   santriId: number;
 
-  @IsDateString()
-  date: string;
+  @IsDateString() // Atau @IsISO8601()
+  date: string; // Format: "2024-01-15T00:00:00.000Z"
 
   @IsEnum(AttendanceStatus)
   status: AttendanceStatus;

@@ -1,17 +1,21 @@
-import { IsInt, IsOptional, IsString } from "class-validator";
+import { IsString, IsOptional, IsInt } from "class-validator";
 
 export class CreateAuditDto {
-  @IsOptional()
-  @IsInt()
-  userId?: number;
+  @IsString()
+  module: string;
 
   @IsString()
   action: string;
 
-  @IsString()
-  module: string;
+  @IsOptional()
+  @IsInt()
+  recordId?: number;
+
+  @IsOptional()
+  @IsInt()
+  userId?: number;
 
   @IsOptional()
   @IsString()
-  detail?: string;
+  note?: string;
 }

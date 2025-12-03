@@ -24,8 +24,12 @@ export class CreateGradeDto {
   remarks?: string;
 
   @IsInt()
+  @Min(1)
+  @Max(2)
   semester: number;
 
   @IsInt()
+  @Min(2000)
+  @Max(2100)
   year: number;
 }
