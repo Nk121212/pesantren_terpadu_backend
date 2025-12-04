@@ -1,6 +1,7 @@
 ﻿import { Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma.service";
 import * as bcrypt from "bcrypt";
+import { Role } from "@prisma/client";
 
 @Injectable()
 export class UsersService {
@@ -21,9 +22,29 @@ export class UsersService {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async list({ skip, take, role }: { skip: number; take: number; role?: any }) {
+  async list({
+    skip,
+    take,
+    role,
+  }: {
+    skip: number;
+    take: number;
+    role?: Role;
+  }) {
+    const whereCondition: any = {};
+
+    if (role) {
+      // Handle multiple roles as string (e.g., "TEACHER,STAFF")
+      if (typeof role === "string" && role.includes(",")) {
+        const roles = role.split(",").map((r) => r.trim() as Role);
+        whereCondition.role = { in: roles };
+      } else {
+        whereCondition.role = role;
+      }
+    }
+
     return this.prisma.user.findMany({
-      where: role ? { role } : undefined,
+      where: whereCondition,
       skip,
       take,
     });

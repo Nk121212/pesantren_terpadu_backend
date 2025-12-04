@@ -8,28 +8,34 @@ import {
   ParseIntPipe,
   UseGuards,
   Query,
+  UsePipes,
+  ValidationPipe,
 } from "@nestjs/common";
 import { CounselingService } from "./counseling.service";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
 import { RolesGuard } from "../common/guards/roles.guard";
 import { Roles } from "../common/decorators/roles.decorator";
 import { Role } from "@prisma/client";
+import { CreateCounselingSessionDto } from "./dto/create-counseling-session.dto";
+import { UpdateCounselingStatusDto } from "./dto/update-counseling-status.dto";
+import { QueryCounselingDto } from "./dto/query-counseling.dto";
 
 @Controller("counseling")
 @UseGuards(JwtAuthGuard, RolesGuard)
+@UsePipes(new ValidationPipe({ transform: true }))
 export class CounselingController {
   constructor(private readonly service: CounselingService) {}
 
   @Roles(Role.SUPERADMIN, Role.ADMIN, Role.STAFF, Role.TEACHER)
   @Post()
-  create(@Body() dto: any) {
+  create(@Body() dto: CreateCounselingSessionDto) {
     return this.service.createSession(dto);
   }
 
   @Roles(Role.SUPERADMIN, Role.ADMIN, Role.STAFF, Role.TEACHER)
   @Get()
-  list(@Query("skip") skip = "0", @Query("take") take = "20") {
-    return this.service.listSessions(Number(skip), Number(take));
+  list(@Query() query: QueryCounselingDto) {
+    return this.service.listSessions(query.skip, query.take);
   }
 
   @Get(":id")
@@ -41,8 +47,8 @@ export class CounselingController {
   @Patch(":id/status")
   updateStatus(
     @Param("id", ParseIntPipe) id: number,
-    @Body("status") status: string
+    @Body() dto: UpdateCounselingStatusDto
   ) {
-    return this.service.updateStatus(id, status);
+    return this.service.updateStatus(id, dto.status);
   }
 }

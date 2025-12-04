@@ -4,7 +4,6 @@ import * as bcrypt from "bcrypt";
 const prisma = new PrismaClient();
 
 async function main() {
-  // 1. Create SUPERADMIN
   const password = await bcrypt.hash("superadmin123", 10);
   const superadmin = await prisma.user.upsert({
     where: { email: "superadmin@example.com" },
