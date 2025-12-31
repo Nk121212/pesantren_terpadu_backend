@@ -441,3 +441,40 @@ enum PpdbStatus {
   ACCEPTED
   REJECTED
 }
+// ================================
+// MENU MANAGEMENT
+// ================================
+model Menu {
+  id        Int       @id @default(autoincrement())
+  parentId  Int?
+  name      String
+  icon      String?
+  path      String?
+  order     Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  
+  // Relasi ke parent (self-reference)
+  parent    Menu?     @relation("MenuParent", fields: [parentId], references: [id])
+  children  Menu[]    @relation("MenuParent")
+  
+  // Relasi ke RoleMenu
+  roleMenus RoleMenu[]
+}
+
+model RoleMenu {
+  id        Int      @id @default(autoincrement())
+  role      Role     // Gunakan enum Role yang sudah ada, bukan String
+  menuId    Int
+  menu      Menu     @relation(fields: [menuId], references: [id])
+  canView   Boolean  @default(true)
+  canCreate Boolean  @default(false)
+  canEdit   Boolean  @default(false)
+  canDelete Boolean  @default(false)
+  canExport Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([role, menuId])
+}

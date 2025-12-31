@@ -1,6 +1,7 @@
 ﻿import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { UsersService } from "../users/users.service";
+import { MenuService } from "../menu/menu.service";
 import * as bcrypt from "bcrypt";
 
 @Injectable()
@@ -9,7 +10,8 @@ export class AuthService {
 
   constructor(
     private usersService: UsersService,
-    private jwtService: JwtService
+    private jwtService: JwtService,
+    private menuService: MenuService
   ) {}
 
   async validateUser(email: string, pass: string) {
@@ -21,9 +23,19 @@ export class AuthService {
   }
 
   async login(user: any) {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { email: user.email, sub: user.id, role: user.role };
+
+    const userMenu = await this.menuService.getMenuTreeByRole(user.role);
+
     return {
       access_token: this.jwtService.sign(payload),
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      menu: userMenu,
     };
   }
 
@@ -31,11 +43,16 @@ export class AuthService {
     const user = await this.usersService.findById(userId);
     if (!user) throw new UnauthorizedException("User not found");
 
+    const userMenu = await this.menuService.getMenuTreeByRole(user.role);
+
     return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
+      menu: userMenu,
     };
   }
 

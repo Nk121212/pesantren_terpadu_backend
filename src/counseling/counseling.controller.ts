@@ -26,23 +26,45 @@ import { QueryCounselingDto } from "./dto/query-counseling.dto";
 export class CounselingController {
   constructor(private readonly service: CounselingService) {}
 
+  // =========================
+  // 📊 STATS (HARUS PALING ATAS)
+  // =========================
+  @Roles(Role.SUPERADMIN, Role.ADMIN, Role.STAFF, Role.TEACHER)
+  @Get("stats")
+  getStats() {
+    return this.service.getStats();
+  }
+
+  // =========================
+  // ➕ CREATE
+  // =========================
   @Roles(Role.SUPERADMIN, Role.ADMIN, Role.STAFF, Role.TEACHER)
   @Post()
   create(@Body() dto: CreateCounselingSessionDto) {
     return this.service.createSession(dto);
   }
 
+  // =========================
+  // 📄 LIST
+  // =========================
   @Roles(Role.SUPERADMIN, Role.ADMIN, Role.STAFF, Role.TEACHER)
   @Get()
   list(@Query() query: QueryCounselingDto) {
     return this.service.listSessions(query.skip, query.take);
   }
 
+  // =========================
+  // 📄 DETAIL (ID HARUS TERAKHIR)
+  // =========================
+  @Roles(Role.SUPERADMIN, Role.ADMIN, Role.STAFF, Role.TEACHER)
   @Get(":id")
   get(@Param("id", ParseIntPipe) id: number) {
     return this.service.getSession(id);
   }
 
+  // =========================
+  // 🔄 UPDATE STATUS
+  // =========================
   @Roles(Role.SUPERADMIN, Role.ADMIN, Role.STAFF)
   @Patch(":id/status")
   updateStatus(

@@ -26,6 +26,9 @@ import { AuditTrailModule } from "./audit/audit-trail.module";
 import { FinanceModule } from "./finance/finance.module";
 import { AcademicModule } from "./academic/academic.module";
 
+import { MenuModule } from "./menu/menu.module";
+import { RoleModule } from "./role/role.module";
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -51,6 +54,8 @@ import { AcademicModule } from "./academic/academic.module";
     AuditTrailModule,
     FinanceModule,
     AcademicModule,
+    MenuModule,
+    RoleModule,
   ],
   providers: [PrismaService, FcmService],
 })

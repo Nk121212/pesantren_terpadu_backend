@@ -6,6 +6,41 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 export class CounselingService {
   constructor(private prisma: PrismaService) {}
 
+  async getStats() {
+    const [
+      totalSessions,
+      totalPlanned,
+      totalOngoing,
+      totalCompleted,
+      totalCancelled,
+    ] = await Promise.all([
+      this.prisma.counselingSession.count(),
+      this.prisma.counselingSession.count({
+        where: { status: CounselingStatus.PLANNED },
+      }),
+      this.prisma.counselingSession.count({
+        where: { status: CounselingStatus.ONGOING },
+      }),
+      this.prisma.counselingSession.count({
+        where: { status: CounselingStatus.COMPLETED },
+      }),
+      this.prisma.counselingSession.count({
+        where: { status: CounselingStatus.CANCELLED },
+      }),
+    ]);
+
+    return {
+      success: true,
+      data: {
+        totalSessions,
+        totalPlanned,
+        totalOngoing,
+        totalCompleted,
+        totalCancelled,
+      },
+    };
+  }
+
   async createSession(dto: any) {
     // Cek apakah santri ada
     const santri = await this.prisma.santri.findUnique({
